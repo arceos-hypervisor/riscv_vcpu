@@ -9,7 +9,6 @@ pub use base::BaseFunction;
 use dbcn::DebugConsoleFunction;
 pub use pmu::PmuFunction;
 pub use rfnc::RemoteFenceFunction;
-use sbi_rt::Reset;
 use sbi_spec;
 pub use srst::ResetFunction;
 
