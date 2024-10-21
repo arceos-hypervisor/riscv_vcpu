@@ -2,7 +2,6 @@
 #![feature(doc_cfg)]
 #![feature(naked_functions)]
 #![feature(riscv_ext_intrinsics)]
-#![feature(asm_const)]
 #![doc = include_str!("../README.md")]
 
 #[macro_use]
@@ -12,7 +11,6 @@ pub mod csrs;
 mod detect;
 mod percpu;
 mod regs;
-pub mod sbi;
 mod vcpu;
 
 pub use self::percpu::RISCVPerCpu;
