@@ -12,8 +12,7 @@ bit_field = "0.10"
 riscv = { git = "https://github.com/rcore-os/riscv", features = ["inline-asm"] }
 riscv-decode = { git = "https://github.com/KuangjuX/riscv-decode.git" }
 rustsbi = { version = "0.4.0", features = ["forward"] }
-sbi-spec = { version = "0.0.7", features = ["legacy"] }
-sbi-rt = { version = "0.0.3", features = ["integer-impls", "legacy"] }
+sbi-rt = { version = "0.0.3", features = ["integer-impls"] }
 tock-registers = "0.8.1"
 memoffset = { version = ">=0.6.5", features = ["unstable_const"] }
 
