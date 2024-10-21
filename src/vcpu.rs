@@ -212,7 +212,7 @@ pub struct RISCVVCpu {
 #[derive(RustSBI)]
 struct RISCVVCpuSbi {
     timer: RISCVVCpuSbiTimer,
-    #[rustsbi(pmu, fence, reset, info)]
+    #[rustsbi(console, pmu, fence, reset, info)]
     forward: Forward,
 }
 
