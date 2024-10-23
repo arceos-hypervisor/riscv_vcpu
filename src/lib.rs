@@ -2,6 +2,7 @@
 #![feature(doc_cfg)]
 #![feature(naked_functions)]
 #![feature(riscv_ext_intrinsics)]
+#![feature(asm_const)]
 #![doc = include_str!("../README.md")]
 
 #[macro_use]
