@@ -33,6 +33,7 @@ macro_rules! guest_csr_offset {
 }
 
 core::arch::global_asm!(
+    include_str!("mem_extable.S"),
     include_str!("trap.S"),
     hyp_ra = const hyp_gpr_offset(GprIndex::RA),
     hyp_gp = const hyp_gpr_offset(GprIndex::GP),
