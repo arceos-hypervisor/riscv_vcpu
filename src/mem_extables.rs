@@ -9,7 +9,7 @@ unsafe extern "C" {
     /// Copy data from host memory to guest physical address.
     fn _copy_to_guest(dst: *mut u8, src: *const u8, len: usize) -> usize;
 }
-/// This file contains functions to copy data between guest physical memory and host memory.
+/// This function copies data from guest physical memory to host memory.
 pub(crate) fn copy_form_guest(dst: &mut [u8], gpa: usize) -> usize {
     let old_vsatp = riscv::register::vsatp::read().bits();
     unsafe {
