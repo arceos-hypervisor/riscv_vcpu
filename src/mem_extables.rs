@@ -2,7 +2,7 @@ use riscv::register::vsatp::Vsatp;
 
 core::arch::global_asm!(include_str!("mem_extable.S"));
 
-unsafe extern "C"{
+unsafe extern "C" {
     pub(crate) fn _copy_from_guest(dst: *mut u8, guest_paddr: *const u8, len: usize) -> usize;
     pub(crate) fn _copy_to_guest(dst: *mut u8, src: *const u8, len: usize) -> usize;
 }

@@ -11,7 +11,7 @@ use axvcpu::{AxVCpuExitReason, AxVCpuHal};
 use crate::regs::*;
 use crate::{EID_HVC, RISCVVCpuCreateConfig, mem_extables};
 
-unsafe extern "C"{
+unsafe extern "C" {
     fn _run_guest(state: *mut VmCpuRegisters);
 }
 
