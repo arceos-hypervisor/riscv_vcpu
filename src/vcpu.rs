@@ -4,12 +4,13 @@ use riscv::register::{htinst, htval, hvip, scause, sie, sstatus, stval};
 use rustsbi::{Forward, RustSBI};
 use sbi_spec::{hsm, legacy};
 
+use crate::regs::*;
+use crate::{EID_HVC, RISCVVCpuCreateConfig, mem_extables};
 use axaddrspace::{GuestPhysAddr, HostPhysAddr, MappingFlags};
 use axerrno::AxResult;
 use axvcpu::{AxVCpuExitReason, AxVCpuHal};
-
-use crate::regs::*;
-use crate::{EID_HVC, RISCVVCpuCreateConfig, mem_extables};
+use memory_addr::VirtAddr;
+use sbi_spec::binary::Physical;
 
 unsafe extern "C" {
     fn _run_guest(state: *mut VmCpuRegisters);
@@ -278,10 +279,11 @@ impl<H: AxVCpuHal> RISCVVCpu<H> {
 
                             let mut buf = alloc::vec![0u8; num_bytes as usize];
                             let copied = mem_extables::copy_form_guest(&mut *buf, gpa as usize);
+                            let ptr = buf.as_ptr();
 
                             if copied == buf.len() {
-                                print_raw(&alloc::string::String::from_utf8_lossy(&buf));
-                                self.sbi_return(RET_SUCCESS, 0);
+                                let ret = console_write(&buf);
+                                self.sbi_return(ret.error, ret.value);
                             } else {
                                 self.sbi_return(RET_ERR_FAILED, 0);
                             }
@@ -299,16 +301,18 @@ impl<H: AxVCpuHal> RISCVVCpu<H> {
                             }
 
                             let mut buf = alloc::vec![0u8; num_bytes as usize];
-                            for b in &mut buf {
-                                *b = 0;
-                            }
+                            let ret = console_read(&mut buf);
 
-                            let copied = mem_extables::copy_to_guest(&*buf, gpa as usize);
-
-                            if copied == buf.len() {
-                                self.sbi_return(RET_SUCCESS, 0);
+                            if ret.is_ok() && ret.value <= buf.len() {
+                                let copied =
+                                    mem_extables::copy_to_guest(&buf[..ret.value], gpa as usize);
+                                if copied == ret.value {
+                                    self.sbi_return(RET_SUCCESS, ret.value);
+                                } else {
+                                    self.sbi_return(RET_ERR_FAILED, 0);
+                                }
                             } else {
-                                self.sbi_return(RET_ERR_FAILED, 0);
+                                self.sbi_return(ret.error, ret.value);
                             }
 
                             return Ok(AxVCpuExitReason::Nothing);
@@ -316,7 +320,7 @@ impl<H: AxVCpuHal> RISCVVCpu<H> {
 
                         FID_CONSOLE_WRITE_BYTE => {
                             let byte = (param[0] & 0xff) as u8;
-                            putchar(byte);
+                            print_char(byte);
                             self.sbi_return(RET_SUCCESS, 0);
                             return Ok(AxVCpuExitReason::Nothing);
                         }

@@ -1,9 +1,10 @@
+use memory_addr::VirtAddr;
+use sbi_spec::binary::{Physical, SbiRet};
 
 pub const EID_DBCN: usize = 0x4442434e;
 pub const FID_CONSOLE_WRITE: usize = 0;
 pub const FID_CONSOLE_READ: usize = 1;
 pub const FID_CONSOLE_WRITE_BYTE: usize = 2;
-
 
 /// SBI success state return value.
 pub const RET_SUCCESS: usize = 0;
@@ -12,9 +13,29 @@ pub const RET_ERR_FAILED: usize = -1isize as _;
 /// Error for target operation not supported.
 pub const RET_ERR_NOT_SUPPORTED: usize = -2isize as _;
 
+/// Represents the return value of an SBI call.
+pub fn console_write(buf: &[u8]) -> SbiRet {
+    let ptr = buf.as_ptr();
+    sbi_rt::console_write(Physical::new(
+        buf.len(),
+        axvisor_api::memory::virt_to_phys(VirtAddr::from_ptr_of(ptr)).as_usize(),
+        0,
+    ))
+}
+
+/// Reads bytes from the console into a buffer using SBI byte-wise API.
+pub fn console_read(buf: &mut [u8]) -> SbiRet {
+    let ptr = buf.as_mut_ptr();
+    sbi_rt::console_read(Physical::new(
+        buf.len(),
+        axvisor_api::memory::virt_to_phys(VirtAddr::from_ptr_of(ptr)).as_usize(),
+        0,
+    ))
+}
+
 /// Writes a full string to console using SBI byte-wise API (no log prefix).
 #[inline(always)]
-pub fn print_raw(s: &str) {
+pub fn print_str(s: &str) {
     for &b in s.as_bytes() {
         sbi_rt::console_write_byte(b);
     }
@@ -22,14 +43,14 @@ pub fn print_raw(s: &str) {
 
 /// Writes a full string + newline to console (no log prefix).
 #[inline(always)]
-pub fn print_rawln(s: &str) {
-    print_raw(s);
+pub fn println_str(s: &str) {
+    print_str(s);
     sbi_rt::console_write_byte(b'\n');
 }
 
 /// Writes a byte to the console.
 #[inline(always)]
-pub fn putchar(c: u8) {
+pub fn print_char(c: u8) {
     sbi_rt::console_write_byte(c);
 }
 
