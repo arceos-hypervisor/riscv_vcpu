@@ -9,15 +9,10 @@ use axerrno::AxResult;
 use axvcpu::{AxVCpuExitReason, AxVCpuHal};
 
 use crate::regs::*;
-use crate::{EID_HVC, RISCVVCpuCreateConfig};
+use crate::{EID_HVC, RISCVVCpuCreateConfig, mem_extables};
 
-unsafe extern {
+unsafe extern "C"{
     fn _run_guest(state: *mut VmCpuRegisters);
-}
-
-unsafe extern {
-    fn _copy_from_guest(dst: *mut u8, guest_paddr: *const u8, len: usize) -> usize;
-    fn _copy_to_guest(dst: *mut u8, src: *const u8, len: usize) -> usize;
 }
 
 /// The architecture dependent configuration of a `AxArchVCpu`.
@@ -192,7 +187,7 @@ impl<H: AxVCpuHal> RISCVVCpu<H> {
                 let param = [a[0], a[1], a[2], a[3], a[4], a[5]];
                 let extension_id = a[7];
                 let function_id = a[6];
-                
+
                 trace!(
                     "sbi_call: eid {:#x} ('{}') fid {:#x} param {:?}",
                     extension_id,
@@ -282,9 +277,7 @@ impl<H: AxVCpuHal> RISCVVCpu<H> {
                             }
 
                             let mut buf = alloc::vec![0u8; num_bytes as usize];
-                            let copied = unsafe {
-                                _copy_from_guest(buf.as_mut_ptr(), gpa as *const u8, buf.len())
-                            };
+                            let copied = mem_extables::copy_form_guest(&mut *buf, gpa as usize);
 
                             if copied == buf.len() {
                                 print_raw(&alloc::string::String::from_utf8_lossy(&buf));
@@ -310,8 +303,7 @@ impl<H: AxVCpuHal> RISCVVCpu<H> {
                                 *b = 0;
                             }
 
-                            let copied =
-                                unsafe { _copy_to_guest(gpa as *mut u8, buf.as_ptr(), buf.len()) };
+                            let copied = mem_extables::copy_to_guest(&*buf, gpa as usize);
 
                             if copied == buf.len() {
                                 self.sbi_return(RET_SUCCESS, 0);
