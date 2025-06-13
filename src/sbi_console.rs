@@ -50,8 +50,8 @@ pub fn println_str(s: &str) {
 
 /// Writes a byte to the console.
 #[inline(always)]
-pub fn print_char(c: u8) {
-    sbi_rt::console_write_byte(c);
+pub fn print_byte(byte: u8) {
+    sbi_rt::console_write_byte(byte);
 }
 
 /// Joins two `usize` values into a `u64` value representing a guest physical address (GPA).

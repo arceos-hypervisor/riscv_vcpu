@@ -320,7 +320,7 @@ impl<H: AxVCpuHal> RISCVVCpu<H> {
 
                         FID_CONSOLE_WRITE_BYTE => {
                             let byte = (param[0] & 0xff) as u8;
-                            print_char(byte);
+                            print_byte(byte);
                             self.sbi_return(RET_SUCCESS, 0);
                             return Ok(AxVCpuExitReason::Nothing);
                         }
