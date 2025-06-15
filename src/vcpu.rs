@@ -278,7 +278,7 @@ impl<H: AxVCpuHal> RISCVVCpu<H> {
                             }
 
                             let mut buf = alloc::vec![0u8; num_bytes as usize];
-                            let copied = mem_extables::copy_form_guest(&mut *buf, gpa as usize);
+                            let copied = mem_extables::copy_from_guest(&mut *buf, gpa as usize);
 
                             if copied == buf.len() {
                                 let ret = console_write(&buf);
