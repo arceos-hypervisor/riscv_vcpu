@@ -4,7 +4,7 @@ use riscv::register::vsatp::Vsatp;
 
 // Notes about this file:
 //
-// 1. This file ("mem_extable.S") comess from salus from Rivos Inc. A copy of the original file can
+// 1. This file ("mem_extable.S") comes from salus from Rivos Inc. A copy of the original file can
 //    be found at https://github.com/rivosinc/salus/blob/27b8d1dbeec96cbcac929c7875a21ec0af03d1bb/src/mem_extable.S
 // 2. The original file contains mechanisms to handle exceptions during guest memory accesses, which
 //    is not used for now in our implementation. However, it's possible for us to implement these
