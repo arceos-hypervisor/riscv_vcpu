@@ -1,5 +1,3 @@
-use core::ops::{Shl, Shr};
-
 use crate::sbi_console::*;
 use axaddrspace::device::AccessWidth;
 use riscv::register::hstatus;
