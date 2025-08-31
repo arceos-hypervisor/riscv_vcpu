@@ -6,10 +6,13 @@
 //! ref: <https://github.com/luojia65/zihai/blob/main/zihai/src/detect.rs>
 
 use core::arch::{asm, naked_asm};
-use riscv::register::{
-    scause::{Exception, Scause, Trap},
-    sstatus,
-    stvec::{self, Stvec, TrapMode},
+use riscv::{
+    interrupt::{Exception, Interrupt, Trap},
+    register::{
+        scause::Scause,
+        sstatus,
+        stvec::{self, Stvec, TrapMode},
+    },
 };
 
 /// Detect if hypervisor extension exists on current hart environment
@@ -44,8 +47,8 @@ extern "C" fn rust_detect_trap(trap_frame: &mut TrapFrame) {
     // specially: illegal instruction => 2
     trap_frame.tp = trap_frame.scause.bits();
     // if illegal instruction, skip current instruction
-    match trap_frame.scause.cause() {
-        Trap::Exception(Exception::IllegalInstruction) => {
+    match trap_frame.scause.cause().try_into::<Interrupt, Exception>() {
+        Ok(Trap::Exception(Exception::IllegalInstruction)) => {
             let mut insn_bits = riscv_illegal_insn_bits((trap_frame.stval & 0xFFFF) as u16);
             if insn_bits == 0 {
                 let insn_half = unsafe { *(trap_frame.sepc as *const u16) };
@@ -54,8 +57,9 @@ extern "C" fn rust_detect_trap(trap_frame: &mut TrapFrame) {
             // skip current instruction
             trap_frame.sepc = trap_frame.sepc.wrapping_add(insn_bits);
         }
-        Trap::Exception(_) => unreachable!(), // FIXME: unexpected instruction errors
-        Trap::Interrupt(_) => unreachable!(), // filtered out for sie == false
+        Ok(Trap::Exception(_)) => unreachable!(), // FIXME: unexpected instruction errors
+        Ok(Trap::Interrupt(_)) => unreachable!(), // filtered out for sie == false
+        Err(_) => unreachable!(),
     }
 }
 
@@ -91,8 +95,13 @@ unsafe fn init_detect_trap(param: usize) -> (bool, Stvec, usize) {
         trap_addr += 0b1;
     }
     let stored_tp: usize;
+
+    let mut stvec = Stvec::from_bits(0);
+    stvec.try_set_address(trap_addr).unwrap();
+    stvec.set_trap_mode(TrapMode::Direct);
+
     unsafe {
-        stvec::write(trap_addr, TrapMode::Direct);
+        stvec::write(stvec);
         // store tp register. tp will be used to load parameter and store return value
         asm!("mv  {}, tp", "mv  tp, {}", out(reg) stored_tp, in(reg) param, options(nomem, nostack));
     }
