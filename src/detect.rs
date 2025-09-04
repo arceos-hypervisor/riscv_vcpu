@@ -46,9 +46,17 @@ extern "C" fn rust_detect_trap(trap_frame: &mut TrapFrame) {
     // store returned exception id value into tp register
     // specially: illegal instruction => 2
     trap_frame.tp = trap_frame.scause.bits();
+
+    let trap: Trap<Interrupt, Exception> = match trap_frame.scause.cause().try_into() {
+        Err(_) => {
+            return;
+        }
+        Ok(trap) => trap,
+    };
+
     // if illegal instruction, skip current instruction
-    match trap_frame.scause.cause().try_into::<Interrupt, Exception>() {
-        Ok(Trap::Exception(Exception::IllegalInstruction)) => {
+    match trap {
+        Trap::Exception(Exception::IllegalInstruction) => {
             let mut insn_bits = riscv_illegal_insn_bits((trap_frame.stval & 0xFFFF) as u16);
             if insn_bits == 0 {
                 let insn_half = unsafe { *(trap_frame.sepc as *const u16) };
@@ -57,9 +65,8 @@ extern "C" fn rust_detect_trap(trap_frame: &mut TrapFrame) {
             // skip current instruction
             trap_frame.sepc = trap_frame.sepc.wrapping_add(insn_bits);
         }
-        Ok(Trap::Exception(_)) => unreachable!(), // FIXME: unexpected instruction errors
-        Ok(Trap::Interrupt(_)) => unreachable!(), // filtered out for sie == false
-        Err(_) => unreachable!(),
+        Trap::Exception(_) => unreachable!(), // FIXME: unexpected instruction errors
+        Trap::Interrupt(_) => unreachable!(), // filtered out for sie == false
     }
 }
 
@@ -97,7 +104,7 @@ unsafe fn init_detect_trap(param: usize) -> (bool, Stvec, usize) {
     let stored_tp: usize;
 
     let mut stvec = Stvec::from_bits(0);
-    stvec.try_set_address(trap_addr).unwrap();
+    stvec.set_address(trap_addr);
     stvec.set_trap_mode(TrapMode::Direct);
 
     unsafe {

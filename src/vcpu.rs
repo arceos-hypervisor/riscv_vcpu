@@ -1,16 +1,16 @@
-use crate::sbi_console::*;
-use axaddrspace::device::AccessWidth;
 use riscv::register::{scause, sie, sstatus};
-use riscv_decode::Instruction;
-use riscv_decode::types::{IType, SType};
+use riscv_decode::{
+    Instruction,
+    types::{IType, SType},
+};
 use riscv_h::register::{hstatus, hvip};
 use rustsbi::{Forward, RustSBI};
 use sbi_spec::{hsm, legacy};
 
-use crate::regs::*;
-use crate::{EID_HVC, RISCVVCpuCreateConfig, guest_mem};
-use axaddrspace::{GuestPhysAddr, GuestVirtAddr, HostPhysAddr, MappingFlags};
-use axerrno::AxResult;
+use crate::{EID_HVC, RISCVVCpuCreateConfig, guest_mem, regs::*, sbi_console::*};
+
+use axaddrspace::{GuestPhysAddr, GuestVirtAddr, HostPhysAddr, MappingFlags, device::AccessWidth};
+use axerrno::{AxError::InvalidData, AxResult};
 use axvcpu::{AxVCpuExitReason, AxVCpuHal};
 
 unsafe extern "C" {
@@ -179,7 +179,6 @@ impl<H: AxVCpuHal> RISCVVCpu<H> {
         self.regs.trap_csrs.load_from_hw();
 
         let scause = scause::read();
-        // use scause::{Exception, Interrupt, Trap};
         use riscv::interrupt::{Exception, Interrupt, Trap};
 
         trace!(
@@ -189,7 +188,14 @@ impl<H: AxVCpuHal> RISCVVCpu<H> {
             self.regs.trap_csrs.stval
         );
 
-        match scause.cause().try_into().unwrap() {
+        let trap = match scause.cause().try_into() {
+            Err(_) => {
+                return Err(InvalidData);
+            }
+            Ok(trap) => trap,
+        };
+
+        match trap {
             Trap::Exception(Exception::SupervisorEnvCall) => {
                 let a = self.regs.guest_regs.gprs.a_regs();
                 let param = [a[0], a[1], a[2], a[3], a[4], a[5]];
