@@ -188,14 +188,11 @@ impl<H: AxVCpuHal> RISCVVCpu<H> {
             self.regs.trap_csrs.stval
         );
 
-        let trap = match scause.cause().try_into() {
-            Err(_) => {
-                // Unknown trap cause, cannot handle it.
-                error!("Unknown trap cause: scause={:#x}", scause.bits());
-                return Err(InvalidData);
-            }
-            Ok(trap) => trap,
-        };
+        // Try to convert the raw trap cause to a standard RISC-V trap cause.
+        let trap = scause.cause().try_into().map_err(|_| {
+            error!("Unknown trap cause: scause={:#x}", scause.bits());
+            InvalidData
+        })?;
 
         match trap {
             Trap::Exception(Exception::SupervisorEnvCall) => {
