@@ -190,6 +190,8 @@ impl<H: AxVCpuHal> RISCVVCpu<H> {
 
         let trap = match scause.cause().try_into() {
             Err(_) => {
+                // Unknown trap cause, cannot handle it.
+                error!("Unknown trap cause: scause={:#x}", scause.bits());
                 return Err(InvalidData);
             }
             Ok(trap) => trap,

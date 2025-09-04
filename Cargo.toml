@@ -21,7 +21,7 @@ bitflags = "2.2"
 bit_field = "0.10"
 crate_interface = "0.1"
 
-riscv = { version = "0.14.0" }
+riscv = "0.14.0"
 riscv-h = "0.1"
 
 riscv-decode = "0.2.3"

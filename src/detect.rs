@@ -49,7 +49,13 @@ extern "C" fn rust_detect_trap(trap_frame: &mut TrapFrame) {
 
     let trap: Trap<Interrupt, Exception> = match trap_frame.scause.cause().try_into() {
         Err(_) => {
-            return;
+            // This instruction detection handler expects only known trap types.
+            // Unknown trap causes indicate either hardware issues or unsupported
+            // RISC-V extensions that this specialized handler cannot process.
+            panic!(
+                "Unknown trap cause in instruction detector: scause={:#x}",
+                trap_frame.scause.bits()
+            );
         }
         Ok(trap) => trap,
     };
