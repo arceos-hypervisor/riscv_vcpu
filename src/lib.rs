@@ -34,14 +34,14 @@ pub struct RISCVVCpuCreateConfig {
     pub hart_id: usize,
     /// The physical address of the device tree blob.
     /// Default to `0x9000_0000`.
-    pub dtb_addr: axaddrspace::GuestPhysAddr,
+    pub dtb_addr: usize,
 }
 
 impl Default for RISCVVCpuCreateConfig {
     fn default() -> Self {
         Self {
             hart_id: 0,
-            dtb_addr: axaddrspace::GuestPhysAddr::from_usize(0x9000_0000),
+            dtb_addr: 0x9000_0000,
         }
     }
 }

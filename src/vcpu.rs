@@ -55,7 +55,7 @@ impl<H: AxVCpuHal> axvcpu::AxArchVCpu for RISCVVCpu<H> {
         // `a1` is the address of the device tree blob.
         regs.guest_regs
             .gprs
-            .set_reg(GprIndex::A1, config.dtb_addr.as_usize());
+            .set_reg(GprIndex::A1, config.dtb_addr);
 
         Ok(Self {
             regs,
