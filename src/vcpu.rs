@@ -3,18 +3,41 @@ use riscv_decode::{
     Instruction,
     types::{IType, SType},
 };
-use riscv_h::register::{hstatus, hvip};
+use riscv_h::register::{vscause::Vscause, vsstatus::Vsstatus};
+use riscv_h::register::{
+    hstatus, htimedelta,
+    hvip,
+    vsatp::{self, Vsatp},
+    vscause, vsepc,
+    vsie::{self, Vsie},
+    vsscratch, vsstatus, vstval,
+    vstvec::{self, Vstvec},
+};
 use rustsbi::{Forward, RustSBI};
-use sbi_spec::{hsm, legacy};
+use sbi_spec::{hsm, legacy, srst};
 
-use crate::{EID_HVC, RISCVVCpuCreateConfig, guest_mem, regs::*, sbi_console::*};
+use crate::{
+    EID_HVC, RISCVVCpuCreateConfig, consts::traps::irq::S_EXT, guest_mem, regs::*, sbi_console::*,
+};
 
 use axaddrspace::{GuestPhysAddr, GuestVirtAddr, HostPhysAddr, MappingFlags, device::AccessWidth};
 use axerrno::{AxError::InvalidData, AxResult};
 use axvcpu::{AxVCpuExitReason, AxVCpuHal};
 
-unsafe extern "C" {
+unsafe extern {
     fn _run_guest(state: *mut VmCpuRegisters);
+}
+
+const TINST_PSEUDO_STORE: u32 = 0x3020;
+const TINST_PSEUDO_LOAD: u32 = 0x3000;
+
+#[inline]
+fn instr_is_presudo(ins: u32) -> bool {
+    if ins == TINST_PSEUDO_STORE || ins == TINST_PSEUDO_LOAD {
+        true
+    } else {
+        false
+    }
 }
 
 /// The architecture dependent configuration of a `AxArchVCpu`.
@@ -53,9 +76,7 @@ impl<H: AxVCpuHal> axvcpu::AxArchVCpu for RISCVVCpu<H> {
         // `a0` is the hartid
         regs.guest_regs.gprs.set_reg(GprIndex::A0, config.hart_id);
         // `a1` is the address of the device tree blob.
-        regs.guest_regs
-            .gprs
-            .set_reg(GprIndex::A1, config.dtb_addr);
+        regs.guest_regs.gprs.set_reg(GprIndex::A1, config.dtb_addr);
 
         Ok(Self {
             regs,
@@ -67,12 +88,15 @@ impl<H: AxVCpuHal> axvcpu::AxArchVCpu for RISCVVCpu<H> {
     fn setup(&mut self, _config: Self::SetupConfig) -> AxResult {
         // Set sstatus.
         let mut sstatus = sstatus::read();
+        sstatus.set_sie(false);
+        sstatus.set_spie(false);
         sstatus.set_spp(sstatus::SPP::Supervisor);
         self.regs.guest_regs.sstatus = sstatus.bits();
 
         // Set hstatus.
         let mut hstatus = hstatus::read();
         hstatus.set_spv(true);
+        hstatus.set_vsxl(hstatus::VsxlValues::Vsxl64);
         // Set SPVP bit in order to accessing VS-mode memory from HS-mode.
         hstatus.set_spvp(true);
         unsafe {
@@ -114,7 +138,26 @@ impl<H: AxVCpuHal> axvcpu::AxArchVCpu for RISCVVCpu<H> {
     }
 
     fn bind(&mut self) -> AxResult {
+        // Load the vCPU's CSRs from the stored state.
         unsafe {
+            let vsatp = Vsatp::from_bits(self.regs.vs_csrs.vsatp);
+            vsatp.write();
+            let vstvec = Vstvec::from_bits(self.regs.vs_csrs.vstvec);
+            vstvec.write();
+            let vsepc = self.regs.vs_csrs.vsepc;
+            vsepc::write(vsepc);
+            let vstval = self.regs.vs_csrs.vstval;
+            vstval::write(vstval);
+            let htimedelta = self.regs.vs_csrs.htimedelta;
+            htimedelta::write(htimedelta);
+            let vscause = Vscause::from_bits(self.regs.vs_csrs.vscause);
+            vscause.write();
+            let vsscratch = self.regs.vs_csrs.vsscratch;
+            vsscratch::write(vsscratch);
+            let vsstatus = Vsstatus::from_bits(self.regs.vs_csrs.vsstatus);
+            vsstatus.write();
+            let vsie = Vsie::from_bits(self.regs.vs_csrs.vsie);
+            vsie.write();
             core::arch::asm!(
                 "csrw hgatp, {hgatp}",
                 hgatp = in(reg) self.regs.virtual_hs_csrs.hgatp,
@@ -125,14 +168,33 @@ impl<H: AxVCpuHal> axvcpu::AxArchVCpu for RISCVVCpu<H> {
     }
 
     fn unbind(&mut self) -> AxResult {
+        // Store the vCPU's CSRs to the stored state.
+        unsafe {
+            self.regs.vs_csrs.vsatp = vsatp::read().bits();
+            self.regs.vs_csrs.vstvec = vstvec::read().bits();
+            self.regs.vs_csrs.vsepc = vsepc::read();
+            self.regs.vs_csrs.vstval = vstval::read();
+            self.regs.vs_csrs.htimedelta = htimedelta::read();
+            self.regs.vs_csrs.vscause = vscause::read().bits();
+            self.regs.vs_csrs.vsscratch = vsscratch::read();
+            self.regs.vs_csrs.vsstatus = vsstatus::read().bits();
+            self.regs.vs_csrs.vsie = vsie::read().bits();
+            core::arch::asm!(
+                "csrr {hgatp}, hgatp",
+                hgatp = out(reg) self.regs.virtual_hs_csrs.hgatp,
+            );
+            core::arch::asm!("csrw hgatp, x0");
+            core::arch::riscv64::hfence_gvma_all();
+        }
         Ok(())
     }
 
     /// Set one of the vCPU's general purpose register.
     fn set_gpr(&mut self, index: usize, val: usize) {
         match index {
-            0..=7 => {
-                self.set_gpr_from_gpr_index(GprIndex::from_raw(index as u32 + 10).unwrap(), val);
+            // x0 - x31, but x0 is hardwired to zero
+            0..=31 => {
+                self.set_gpr_from_gpr_index(GprIndex::from_raw(index as u32).unwrap(), val);
             }
             _ => {
                 warn!(
@@ -195,7 +257,7 @@ impl<H: AxVCpuHal> RISCVVCpu<H> {
         })?;
 
         match trap {
-            Trap::Exception(Exception::SupervisorEnvCall) => {
+            Trap::Exception(Exception::VirtualSupervisorEnvCall) => {
                 let a = self.regs.guest_regs.gprs.a_regs();
                 let param = [a[0], a[1], a[2], a[3], a[4], a[5]];
                 let extension_id = a[7];
@@ -348,6 +410,21 @@ impl<H: AxVCpuHal> RISCVVCpu<H> {
                             return Ok(AxVCpuExitReason::Nothing);
                         }
                     },
+                    srst::EID_SRST => match function_id {
+                        srst::SYSTEM_RESET => {
+                            let reset_type = param[0];
+                            if reset_type == srst::RESET_TYPE_SHUTDOWN as _ {
+                                // Shutdown the system.
+                                return Ok(AxVCpuExitReason::SystemDown);
+                            } else {
+                                unimplemented!("Unsupported reset type {}", reset_type);
+                            }
+                        }
+                        _ => {
+                            self.sbi_return(RET_ERR_NOT_SUPPORTED, 0);
+                            return Ok(AxVCpuExitReason::Nothing);
+                        }
+                    },
                     // By default, forward the SBI call to the RustSBI implementation.
                     // See [`RISCVVCpuSbi`].
                     _ => {
@@ -381,11 +458,11 @@ impl<H: AxVCpuHal> RISCVVCpu<H> {
                 // It's a great fault in the `riscv` crate that `Interrupt` and `Exception` are not
                 // explicitly numbered, and they provide no way to convert them to a number. Also,
                 // `as usize` will give use a wrong value.
-                Ok(AxVCpuExitReason::ExternalInterrupt { vector: 9 })
+                Ok(AxVCpuExitReason::ExternalInterrupt { vector: S_EXT as _ })
             }
-            Trap::Exception(gpf @ (Exception::LoadPageFault | Exception::StorePageFault)) => {
-                self.handle_guest_page_fault(gpf == Exception::StorePageFault)
-            }
+            Trap::Exception(
+                gpf @ (Exception::LoadGuestPageFault | Exception::StoreGuestPageFault),
+            ) => self.handle_guest_page_fault(gpf == Exception::StoreGuestPageFault),
             _ => {
                 panic!(
                     "Unhandled trap: {:?}, sepc: {:#x}, stval: {:#x}",
@@ -409,13 +486,31 @@ impl<H: AxVCpuHal> RISCVVCpu<H> {
     fn decode_instr_at(&self, vaddr: GuestVirtAddr) -> AxResult<(Instruction, usize)> {
         // The htinst CSR contains "transformed instruction" that caused the page fault. We
         // can use it but we use the sepc to fetch the original instruction instead for now.
-        let instr = guest_mem::fetch_guest_instruction(vaddr);
-        let instr_len = riscv_decode::instruction_length(instr as u16);
-        let instr = match instr_len {
-            2 => instr & 0xffff,
-            4 => instr,
-            _ => unreachable!("Unsupported instruction length: {}", instr_len),
-        };
+        let mut instr = riscv_h::register::htinst::read();
+        let mut instr_len = 0;
+        if instr == 0 {
+            // Read the instruction from guest memory.
+            instr = guest_mem::fetch_guest_instruction(vaddr) as _;
+            instr_len = riscv_decode::instruction_length(instr as u16);
+            instr = match instr_len {
+                2 => instr & 0xffff,
+                4 => instr,
+                _ => unreachable!("Unsupported instruction length: {}", instr_len),
+            };
+        } else if instr_is_presudo(instr as u32) {
+            error!("fault on 1st stage page table walk");
+        } else {
+            // Transform htinst value to standard instruction.
+            // According to RISC-V Spec:
+            //      Bits 1:0 of a transformed standard instruction will be binary 01 if
+            //      the trapping instruction is compressed and 11 if not.
+            instr_len = match (instr as u16) & 0x3 {
+                0x1 => 2,
+                0x3 => 4,
+                _ => unreachable!("Unsupported instruction length"),
+            };
+            instr |= 0x2;
+        }
 
         riscv_decode::decode(instr as u32)
             .map_err(|_| {
