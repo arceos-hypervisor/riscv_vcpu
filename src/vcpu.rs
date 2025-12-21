@@ -3,16 +3,15 @@ use riscv_decode::{
     Instruction,
     types::{IType, SType},
 };
-use riscv_h::register::{vscause::Vscause, vsstatus::Vsstatus};
 use riscv_h::register::{
-    hstatus, htimedelta,
-    hvip,
+    hstatus, htimedelta, hvip,
     vsatp::{self, Vsatp},
     vscause, vsepc,
     vsie::{self, Vsie},
     vsscratch, vsstatus, vstval,
     vstvec::{self, Vstvec},
 };
+use riscv_h::register::{vscause::Vscause, vsstatus::Vsstatus};
 use rustsbi::{Forward, RustSBI};
 use sbi_spec::{hsm, legacy, srst};
 
