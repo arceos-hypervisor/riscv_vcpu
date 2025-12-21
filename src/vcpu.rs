@@ -23,7 +23,7 @@ use axaddrspace::{GuestPhysAddr, GuestVirtAddr, HostPhysAddr, MappingFlags, devi
 use axerrno::{AxError::InvalidData, AxResult};
 use axvcpu::{AxVCpuExitReason, AxVCpuHal};
 
-unsafe extern {
+unsafe extern "C" {
     fn _run_guest(state: *mut VmCpuRegisters);
 }
 
