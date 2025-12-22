@@ -189,8 +189,10 @@ impl<H: AxVCpuHal> axvcpu::AxArchVCpu for RISCVVCpu<H> {
     /// Set one of the vCPU's general purpose register.
     fn set_gpr(&mut self, index: usize, val: usize) {
         match index {
-            // x0 - x31, but x0 is hardwired to zero
-            0..=31 => {
+            0 => {
+                // Do nothing, x0 is hardwired to zero
+            }
+            1..=31 => {
                 self.set_gpr_from_gpr_index(GprIndex::from_raw(index as u32).unwrap(), val);
             }
             _ => {
@@ -497,6 +499,10 @@ impl<H: AxVCpuHal> RISCVVCpu<H> {
             };
         } else if instr_is_pseudo(instr as u32) {
             error!("fault on 1st stage page table walk");
+            return Err(axerrno::ax_err_type!(
+                Unsupported,
+                "risc-v vcpu guest page fault handler encountered pseudo instruction"
+            ));
         } else {
             // Transform htinst value to standard instruction.
             // According to RISC-V Spec:
