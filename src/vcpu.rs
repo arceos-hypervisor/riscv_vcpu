@@ -6,12 +6,14 @@ use riscv_decode::{
 use riscv_h::register::{
     hstatus, htimedelta, hvip,
     vsatp::{self, Vsatp},
-    vscause, vsepc,
+    vscause::{self, Vscause},
+    vsepc,
     vsie::{self, Vsie},
-    vsscratch, vsstatus, vstval,
+    vsscratch,
+    vsstatus::{self, Vsstatus},
+    vstval,
     vstvec::{self, Vstvec},
 };
-use riscv_h::register::{vscause::Vscause, vsstatus::Vsstatus};
 use rustsbi::{Forward, RustSBI};
 use sbi_spec::{hsm, legacy, srst};
 
@@ -31,12 +33,8 @@ const TINST_PSEUDO_STORE: u32 = 0x3020;
 const TINST_PSEUDO_LOAD: u32 = 0x3000;
 
 #[inline]
-fn instr_is_presudo(ins: u32) -> bool {
-    if ins == TINST_PSEUDO_STORE || ins == TINST_PSEUDO_LOAD {
-        true
-    } else {
-        false
-    }
+fn instr_is_pseudo(ins: u32) -> bool {
+    ins == TINST_PSEUDO_STORE || ins == TINST_PSEUDO_LOAD
 }
 
 /// The architecture dependent configuration of a `AxArchVCpu`.
@@ -240,7 +238,8 @@ impl<H: AxVCpuHal> RISCVVCpu<H> {
         self.regs.trap_csrs.load_from_hw();
 
         let scause = scause::read();
-        use riscv::interrupt::{Exception, Interrupt, Trap};
+        use super::trap::Exception;
+        use riscv::interrupt::{Interrupt, Trap};
 
         trace!(
             "vmexit_handler: {:?}, sepc: {:#x}, stval: {:#x}",
@@ -250,7 +249,7 @@ impl<H: AxVCpuHal> RISCVVCpu<H> {
         );
 
         // Try to convert the raw trap cause to a standard RISC-V trap cause.
-        let trap = scause.cause().try_into().map_err(|_| {
+        let trap: Trap<Interrupt, Exception> = scause.cause().try_into().map_err(|_| {
             error!("Unknown trap cause: scause={:#x}", scause.bits());
             InvalidData
         })?;
@@ -496,7 +495,7 @@ impl<H: AxVCpuHal> RISCVVCpu<H> {
                 4 => instr,
                 _ => unreachable!("Unsupported instruction length: {}", instr_len),
             };
-        } else if instr_is_presudo(instr as u32) {
+        } else if instr_is_pseudo(instr as u32) {
             error!("fault on 1st stage page table walk");
         } else {
             // Transform htinst value to standard instruction.
