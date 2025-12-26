@@ -193,7 +193,14 @@ impl<H: AxVCpuHal> axvcpu::AxArchVCpu for RISCVVCpu<H> {
                 // Do nothing, x0 is hardwired to zero
             }
             1..=31 => {
-                self.set_gpr_from_gpr_index(GprIndex::from_raw(index as u32).unwrap(), val);
+                if let Some(gpr_index) = GprIndex::from_raw(index as u32) {
+                    self.set_gpr_from_gpr_index(gpr_index, val);
+                } else {
+                    warn!(
+                        "RISCVVCpu: Failed to map general purpose register index: {}",
+                        index
+                    );
+                }
             }
             _ => {
                 warn!(
