@@ -22,7 +22,7 @@ use crate::{
 };
 
 use axaddrspace::{GuestPhysAddr, GuestVirtAddr, HostPhysAddr, MappingFlags, device::AccessWidth};
-use axerrno::{AxError::InvalidData, AxResult};
+use axerrno::{AxErrorKind::InvalidData, AxResult};
 use axvcpu::{AxVCpuExitReason, AxVCpuHal};
 
 unsafe extern "C" {
