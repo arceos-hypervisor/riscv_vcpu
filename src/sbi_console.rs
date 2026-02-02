@@ -1,6 +1,8 @@
 use memory_addr::VirtAddr;
 use sbi_spec::binary::{Physical, SbiRet};
 
+use axhal::mem;
+
 pub const EID_DBCN: usize = 0x4442434e;
 pub const FID_CONSOLE_WRITE: usize = 0;
 pub const FID_CONSOLE_READ: usize = 1;
@@ -18,7 +20,7 @@ pub fn console_write(buf: &[u8]) -> SbiRet {
     let ptr = buf.as_ptr();
     sbi_rt::console_write(Physical::new(
         buf.len(),
-        axvisor_api::memory::virt_to_phys(VirtAddr::from_ptr_of(ptr)).as_usize(),
+        mem::virt_to_phys(VirtAddr::from_ptr_of(ptr)).as_usize(),
         0,
     ))
 }
@@ -28,7 +30,7 @@ pub fn console_read(buf: &mut [u8]) -> SbiRet {
     let ptr = buf.as_mut_ptr();
     sbi_rt::console_read(Physical::new(
         buf.len(),
-        axvisor_api::memory::virt_to_phys(VirtAddr::from_ptr_of(ptr)).as_usize(),
+        mem::virt_to_phys(VirtAddr::from_ptr_of(ptr)).as_usize(),
         0,
     ))
 }

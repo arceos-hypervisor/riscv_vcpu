@@ -22,6 +22,13 @@ pub use self::vcpu::RISCVVCpu;
 pub use detect::detect_h_extension as has_hardware_support;
 pub use regs::GprIndex;
 
+// Re-export address and device types
+pub use axvm_types::addr::*;
+pub use axvm_types::device::*;
+
+// Re-export exit reason types
+pub use axvcpu::AxVCpuExitReason;
+
 /// Extension ID for hypercall, defined by ourselves.
 /// `0x48`, `0x56`, `0x43` is "HVC" in ASCII.
 ///
@@ -44,5 +51,41 @@ impl Default for RISCVVCpuCreateConfig {
             hart_id: 0,
             dtb_addr: 0x9000_0000,
         }
+    }
+}
+
+pub trait CpuHal {
+    fn irq_hanlder(&self);
+    fn inject_interrupt(&self, irq: usize);
+}
+
+struct NopHal;
+
+impl CpuHal for NopHal {
+    fn irq_hanlder(&self) {
+        unimplemented!()
+    }
+    fn inject_interrupt(&self, _irq: usize) {
+        unimplemented!()
+    }
+}
+
+static mut HAL: &dyn CpuHal = &NopHal;
+
+fn hal() -> &'static dyn CpuHal {
+    unsafe { HAL }
+}
+
+pub fn handle_irq() {
+    hal().irq_hanlder();
+}
+
+pub fn inject_interrupt(irq: usize) {
+    hal().inject_interrupt(irq);
+}
+
+pub fn init_hal(hal: &'static dyn CpuHal) {
+    unsafe {
+        HAL = hal;
     }
 }

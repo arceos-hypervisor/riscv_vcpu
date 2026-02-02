@@ -38,7 +38,8 @@ memoffset = { version = ">=0.6.5", features = ["unstable_const"] }
 axerrno = "0.1.0"
 page_table_entry = "0.5"
 memory_addr = "0.4"
-
-axaddrspace = "0.1"
-axvcpu = "0.1"
-axvisor_api = "0.1"
+axaddrspace = { workspace = true }
+axvcpu = { workspace = true }
+axvisor_api = { workspace = true }
+axvm-types = { workspace = true }
+axhal = { workspace = true }
