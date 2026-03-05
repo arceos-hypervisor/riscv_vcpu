@@ -1,6 +1,6 @@
 [package]
 name = "riscv_vcpu"
-version = "0.2.2"
+version = "0.3.0"
 edition = "2024"
 authors = [
     "KeYang Hu <keyang.hu@qq.com>",
@@ -42,8 +42,3 @@ memory_addr = "0.4"
 axaddrspace = "0.3"
 axvcpu = "0.3"
 axvisor_api = "0.3"
-
-[patch.crates-io]
-axvcpu = { git = "https://github.com/arceos-hypervisor/axvcpu", branch = "aar-master" }
-axvisor_api = { git = "https://github.com/arceos-hypervisor/axvisor_api", branch = "aar-master" }
-axaddrspace = { git = "https://github.com/arceos-hypervisor/axaddrspace", branch = "aar-master" }
