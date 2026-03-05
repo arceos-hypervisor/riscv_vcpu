@@ -1,6 +1,6 @@
 [package]
 name = "riscv_vcpu"
-version = "0.1.2"
+version = "0.2.2"
 edition = "2024"
 authors = [
     "KeYang Hu <keyang.hu@qq.com>",
@@ -9,7 +9,7 @@ authors = [
     "周睿 <zrufo747@outlook.com>"
 ]
 description = "ArceOS-Hypervisor riscv vcpu module"
-license = "GPL-3.0-or-later OR Apache-2.0 OR MulanPSL-2.0" # MulanPubL2 is not included in SPDX
+license = "Apache-2.0"
 repository = "https://github.com/arceos-hypervisor/riscv_vcpu"
 categories = ["embedded", "no-std"]
 keywords = ["hypervisor", "riscv", "vcpu"]
@@ -23,10 +23,10 @@ log = "0.4"
 cfg-if = "1.0"
 bitflags = "2.2"
 bit_field = "0.10"
-crate_interface = "0.2"
+crate_interface = "0.3"
 
 riscv = { version = "0.14.0", features = ["s-mode"] }
-riscv-h = "0.1"
+riscv-h = "0.2"
 
 riscv-decode = "0.2.3"
 rustsbi = { version = "0.4.0", features = ["forward"] }
@@ -36,12 +36,12 @@ tock-registers = "0.10"
 memoffset = { version = ">=0.6.5", features = ["unstable_const"] }
 
 axerrno = "0.2"
-page_table_entry = "0.5"
+page_table_entry = "0.6"
 memory_addr = "0.4"
 
-axaddrspace = "0.2"
-axvcpu = "0.1.2"
-axvisor_api = "0.2"
+axaddrspace = "0.3"
+axvcpu = "0.3"
+axvisor_api = "0.3"
 
 [patch.crates-io]
 axvcpu = { git = "https://github.com/arceos-hypervisor/axvcpu", branch = "aar-master" }

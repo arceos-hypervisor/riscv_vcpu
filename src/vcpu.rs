@@ -1,3 +1,17 @@
+// Copyright 2025 The Axvisor Team
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 use riscv::register::{scause, sie, sstatus};
 use riscv_decode::{
     Instruction,
@@ -194,17 +208,11 @@ impl axvcpu::AxArchVCpu for RISCVVCpu {
                 if let Some(gpr_index) = GprIndex::from_raw(index as u32) {
                     self.set_gpr_from_gpr_index(gpr_index, val);
                 } else {
-                    warn!(
-                        "RISCVVCpu: Failed to map general purpose register index: {}",
-                        index
-                    );
+                    warn!("RISCVVCpu: Failed to map general purpose register index: {index}");
                 }
             }
             _ => {
-                warn!(
-                    "RISCVVCpu: Unsupported general purpose register index: {}",
-                    index
-                );
+                warn!("RISCVVCpu: Unsupported general purpose register index: {index}");
             }
         }
     }
@@ -301,8 +309,7 @@ impl RISCVVCpu {
                         }
                         _ => {
                             warn!(
-                                "Unsupported SBI legacy extension id {:#x} function id {:#x}",
-                                extension_id, function_id
+                                "Unsupported SBI legacy extension id {extension_id:#x} function id {function_id:#x}"
                             );
                         }
                     },
@@ -358,9 +365,9 @@ impl RISCVVCpu {
                                 return Ok(AxVCpuExitReason::Nothing);
                             }
 
-                            let mut buf = alloc::vec![0u8; num_bytes as usize];
+                            let mut buf = alloc::vec![0u8; num_bytes];
                             let copied = guest_mem::copy_from_guest(
-                                &mut *buf,
+                                &mut buf,
                                 GuestPhysAddr::from(gpa as usize),
                             );
 
@@ -383,7 +390,7 @@ impl RISCVVCpu {
                                 return Ok(AxVCpuExitReason::Nothing);
                             }
 
-                            let mut buf = alloc::vec![0u8; num_bytes as usize];
+                            let mut buf = alloc::vec![0u8; num_bytes];
                             let ret = console_read(&mut buf);
 
                             if ret.is_ok() && ret.value <= buf.len() {
@@ -492,7 +499,7 @@ impl RISCVVCpu {
         // The htinst CSR contains "transformed instruction" that caused the page fault. We
         // can use it but we use the sepc to fetch the original instruction instead for now.
         let mut instr = riscv_h::register::htinst::read();
-        let mut instr_len = 0;
+        let instr_len;
         if instr == 0 {
             // Read the instruction from guest memory.
             instr = guest_mem::fetch_guest_instruction(vaddr) as _;
