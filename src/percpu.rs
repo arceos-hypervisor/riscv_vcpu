@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use core::marker::PhantomData;
-
 use axerrno::{AxError, AxResult};
 use axvcpu::AxArchPerCpu;
 
