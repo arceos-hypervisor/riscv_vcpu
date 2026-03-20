@@ -70,7 +70,7 @@ cd riscv_vcpu
 ./scripts/test.sh list
 
 # 使用特定目标运行单元测试（需要 QEMU 或交叉编译器）
-cargo test --target riscv64gc-unknown-linux-gnu
+cargo test --target riscv64gc-unknown-linux-gnu --tests 
 ```
 
 ## 集成使用
@@ -87,24 +87,22 @@ riscv_vcpu = "0.3"
 ### 使用示例
 
 ```rust,ignore
-use riscv_vcpu::{RISCVVCpu, RISCVVCpuCreateConfig, has_hardware_support, GprIndex};
+use riscv_vcpu::{RISCVVCpuCreateConfig, has_hardware_support, GprIndex};
 
-fn main() {
-    // 检查硬件虚拟化支持
-    if has_hardware_support() {
-        println!("RISC-V H-extension 已支持");
-        
-        // 创建 vCPU 配置
-        let config = RISCVVCpuCreateConfig::default();
-        
-        // 访问寄存器索引
-        let a0 = GprIndex::A0;
-        println!("A0 寄存器索引: {}", a0 as u32);  // 10
-        
-        // 从原始值转换
-        let reg = GprIndex::from_raw(10).unwrap();
-        assert_eq!(reg, GprIndex::A0);
-    }
+// 检查硬件虚拟化支持
+if has_hardware_support() {
+    println!("RISC-V H-extension 已支持");
+    
+    // 创建 vCPU 配置
+    let config = RISCVVCpuCreateConfig::default();
+    
+    // 访问寄存器索引
+    let a0 = GprIndex::A0;
+    println!("A0 寄存器索引: {}", a0 as u32);  // 10
+    
+    // 从原始值转换
+    let reg = GprIndex::from_raw(10).unwrap();
+    assert_eq!(reg, GprIndex::A0);
 }
 ```
 
@@ -153,4 +151,4 @@ cargo doc --no-deps --open
 
 # 协议
 
-本项目采用 Apache License, Version 2.0 许可证。详见 [LICENSE](LICENSE) 文件。
+本项目采用 Apache License, Version 2.0 许可证。详见 \[LICENSE\](LICENSE) 文件。

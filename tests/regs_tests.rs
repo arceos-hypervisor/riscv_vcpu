@@ -93,10 +93,10 @@ fn test_gpr_index_clone_copy() {
     let a0 = GprIndex::A0;
     let a0_copy = a0;
     let a0_clone = a0.clone();
-    
+
     assert_eq!(a0 as u32, a0_copy as u32);
     assert_eq!(a0 as u32, a0_clone as u32);
-    
+
     // Verify Copy semantics (a0 is still usable after move)
     assert_eq!(a0 as u32, 10);
 }

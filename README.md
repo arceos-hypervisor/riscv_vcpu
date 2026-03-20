@@ -86,24 +86,22 @@ riscv_vcpu = "0.3"
 ### Example
 
 ```rust
-use riscv_vcpu::{RISCVVCpu, RISCVVCpuCreateConfig, has_hardware_support, GprIndex};
+use riscv_vcpu::{RISCVVCpuCreateConfig, has_hardware_support, GprIndex};
 
-fn main() {
-    // Check if hardware virtualization is supported
-    if has_hardware_support() {
-        println!("RISC-V H-extension is supported");
-        
-        // Create vCPU configuration
-        let config = RISCVVCpuCreateConfig::default();
-        
-        // Access register indices
-        let a0 = GprIndex::A0;
-        println!("A0 register index: {}", a0 as u32);  // 10
-        
-        // Convert from raw value
-        let reg = GprIndex::from_raw(10).unwrap();
-        assert_eq!(reg, GprIndex::A0);
-    }
+// Check if hardware virtualization is supported
+if has_hardware_support() {
+    println!("RISC-V H-extension is supported");
+    
+    // Create vCPU configuration
+    let config = RISCVVCpuCreateConfig::default();
+    
+    // Access register indices
+    let a0 = GprIndex::A0;
+    println!("A0 register index: {}", a0 as u32);  // 10
+    
+    // Convert from raw value
+    let reg = GprIndex::from_raw(10).unwrap();
+    assert_eq!(reg, GprIndex::A0);
 }
 ```
 
@@ -152,4 +150,4 @@ Online documentation: [docs.rs/riscv_vcpu](https://docs.rs/riscv_vcpu)
 
 # License
 
-Licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) for details.
+Licensed under the Apache License, Version 2.0. See \[LICENSE\](LICENSE) for details.
