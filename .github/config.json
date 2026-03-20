@@ -1,6 +1,16 @@
 {
+  "component": {
+    "name": "riscv_vcpu",
+    "crate_name": "riscv_vcpu"
+  },
   "targets": [
     "riscv64gc-unknown-none-elf"
+  ],
+  "unit_test_targets": [
+  {
+    "target": "riscv64gc-unknown-linux-gnu",
+    "test_command": "cargo test --target riscv64gc-unknown-none-elf"
+  }
   ],
   "rust_components": [
     "rust-src",

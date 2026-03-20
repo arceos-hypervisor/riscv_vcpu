@@ -1,55 +1,155 @@
-# **riscv_vcpu**
+<h1 align="center">riscv_vcpu</h1>
 
-riscv64 virtual CPU (vCPU) implementation for hypervisors. This crate provides the core vCPU structure and virtualization-related interface support specifically designed for the riscv64 architecture.
+<p align="center">RISC-V Virtual CPU (vCPU) Implementation for Hypervisors</p>
 
-[![CI](https://github.com/arceos-hypervisor/riscv_vcpu/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/arceos-hypervisor/riscv_vcpu/actions/workflows/ci.yml)
-[![License](https://img.shields.io/badge/License-MIT%20OR%20Apache--2.0-blue.svg)]
+<div align="center">
 
-## Overview
+[![Crates.io](https://img.shields.io/crates/v/riscv_vcpu.svg)](https://crates.io/crates/riscv_vcpu)
+[![Docs.rs](https://docs.rs/riscv_vcpu/badge.svg)](https://docs.rs/riscv_vcpu)
+[![Rust](https://img.shields.io/badge/edition-2024-orange.svg)](https://www.rust-lang.org/)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](https://github.com/arceos-hypervisor/riscv_vcpu/blob/main/LICENSE)
 
-riscv_vcpu implements a minimal RISC-V Virtual CPU (VCPU) abstraction layer compliant with the RISC-V Hypervisor Extension (RVH). Designed for embedded hypervisors and educational use, it can operates in no_std environments.
+</div>
 
-## Features
+English | [中文](README_CN.md)
 
-- **Complete vCPU Implementation**: Full virtual CPU structure for riscv64 guests
-- **Exception Handling**: Comprehensive trap and exception handling for virtualized environments
-- **EPT (Extended Page Tables)**: Memory virtualization support
-- **VMCS Management**: Virtual Machine Control Structure operations
-- **Per-CPU Support**: Efficient per-CPU data structures and management
-- **No-std Compatible**: Works in bare-metal and embedded environments
+# Introduction
 
-## Usage
+A library providing RISC-V Virtual CPU (vCPU) implementation for hypervisors. This crate provides the core vCPU structure and virtualization-related interface support specifically designed for the RISC-V architecture. Compliant with the RISC-V Hypervisor Extension (RVH), designed for embedded hypervisors and educational use.
 
-Add this to your `Cargo.toml`:
+This library exports the following core types:
+
+- **`RISCVVCpu`** — RISC-V virtual CPU implementation with full virtualization support
+- **`RISCVPerCpu`** — Per-CPU data structure and management for RISC-V hypervisors
+- **`GprIndex`** — RISC-V general-purpose register index enumeration (x0-x31)
+- **`EID_HVC`** — Hypercall extension ID constant (0x485643 = "HVC" in ASCII)
+
+Supports `#![no_std]` for bare-metal and OS kernel development.
+
+## Quick Start
+
+### Requirements
+
+- Rust nightly toolchain
+- Rust components: rust-src, clippy, rustfmt
+- RISC-V target: riscv64gc-unknown-none-elf
+
+```bash
+# Install rustup (if not installed)
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+# Install nightly toolchain and components
+rustup install nightly
+rustup component add rust-src clippy rustfmt --toolchain nightly
+
+# Add RISC-V target
+rustup target add riscv64gc-unknown-none-elf --toolchain nightly
+```
+
+### Run Check and Test
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/arceos-hypervisor/riscv_vcpu.git
+cd riscv_vcpu
+
+# 2. Code check (format + clippy + build + doc generation)
+./scripts/check.sh
+
+# 3. Run tests
+# Run all tests (unit tests + integration tests)
+./scripts/test.sh
+
+# Run unit tests only
+./scripts/test.sh unit
+
+# Run integration tests only
+./scripts/test.sh integration
+
+# List all available test suites
+./scripts/test.sh list
+
+# Run unit tests with specific target (requires QEMU or cross-compiler)
+cargo test --target riscv64gc-unknown-linux-gnu --tests  
+
+## Integration
+
+### Installation
+
+Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-riscv_vcpu = "0.1"
+riscv_vcpu = "0.3"
 ```
 
-## Basic Usage
+### Example
 
-```rust,ignore
-use riscv_vcpu::{RISCVVCpu, RISCVVCpuCreateConfig, has_hardware_support};
+```rust
+use riscv_vcpu::{RISCVVCpu, RISCVVCpuCreateConfig, has_hardware_support, GprIndex};
 
-// Check if hardware virtualization is supported
-if has_hardware_support() {
-    // Create vCPU configuration
-    let config = RISCVVCpuCreateConfig::default();
-    
-    // Create and configure the virtual CPU
-    let vcpu = RISCVVCpu::new(config)?;
-    
-    // Run the virtual CPU
-    vcpu.run()?;
+fn main() {
+    // Check if hardware virtualization is supported
+    if has_hardware_support() {
+        println!("RISC-V H-extension is supported");
+        
+        // Create vCPU configuration
+        let config = RISCVVCpuCreateConfig::default();
+        
+        // Access register indices
+        let a0 = GprIndex::A0;
+        println!("A0 register index: {}", a0 as u32);  // 10
+        
+        // Convert from raw value
+        let reg = GprIndex::from_raw(10).unwrap();
+        assert_eq!(reg, GprIndex::A0);
+    }
 }
 ```
 
-## Related Projects 
+### Documentation
 
-+ [ArceOS](https://github.com/arceos-org/arceos) - An experimental modular OS (or Unikernel)
-+ [AxVisor](https://github.com/arceos-hypervisor/axvisor) - Hypervisor implementation
+Generate and view API documentation:
 
-## License
+```bash
+cargo doc --no-deps --open
+```
 
-Riscv_vcpu is licensed under the Apache License, Version 2.0. See the [LICENSE](./LICENSE) file for details.
+Online documentation: [docs.rs/riscv_vcpu](https://docs.rs/riscv_vcpu)
+
+## Architecture
+
+```text
+┌─────────────────────────────────────────┐
+│           RISCVVCpu                     │
+│  ┌─────────────────────────────────┐    │
+│  │  VmCpuRegisters                 │    │
+│  │  ├─ hyp_regs (Hypervisor state) │    │
+│  │  ├─ guest_regs (Guest state)    │    │
+│  │  ├─ vs_csrs (VS-level CSRs)     │    │
+│  │  ├─ virtual_hs_csrs             │    │
+│  │  └─ trap_csrs (Trap state)      │    │
+│  └─────────────────────────────────┘    │
+│  ┌─────────────────────────────────┐    │
+│  │  RISCVPerCpu                    │    │
+│  │  (Per-CPU data & management)    │    │
+│  └─────────────────────────────────┘    │
+└─────────────────────────────────────────┘
+```
+
+## Related Projects
+
+- [ArceOS](https://github.com/arceos-org/arceos) - An experimental modular OS (or Unikernel)
+- [AxVisor](https://github.com/arceos-hypervisor/axvisor) - Type 1 hypervisor implementation
+- [aarch64_sysreg](https://github.com/arceos-org/aarch64_sysreg) - AArch64 system register definitions
+
+# Contributing
+
+1. Fork the repository and create a branch
+2. Run local check: `./scripts/check.sh`
+3. Run local tests: `./scripts/test.sh`
+4. Submit PR and pass CI checks
+
+# License
+
+Licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) for details.
